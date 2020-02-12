@@ -28,7 +28,8 @@ libSocketTest.so: src/SocketTest.h src/SocketTest.c
 SocketTest.jar: src/SocketTest.class src/manifest.txt
 	cd src && jar cfm ../SocketTest.jar manifest.txt SocketTest.class
 
-run-jar: SocketTest.jar libSocketTest.so
+run-jar-test: SocketTest.jar libSocketTest.so
+	nc -l -U socket & \
 	LD_LIBRARY_PATH=./ java -jar SocketTest.jar
 
 sockettest: SocketTest.jar libSocketTest.so
@@ -45,5 +46,6 @@ sockettest: SocketTest.jar libSocketTest.so
 
 #		-H:+TraceClassInitialization -H:+PrintClassInitialization
 
-run-native: sockettest libSocketTest.so
+run-native-test: sockettest libSocketTest.so
+	nc -l -U socket & \
 	LD_LIBRARY_PATH=./ ./sockettest
