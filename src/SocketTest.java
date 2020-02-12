@@ -30,7 +30,33 @@ class SocketTest {
         // to load the library file
         System.loadLibrary("SocketTest");
 
-        new SocketTest().print();
+        SocketTest test = new SocketTest();
+
+        // connected?
+        test.print();
+
+        int fd = test.open_unix_socket("socket");
+
+        System.out.println("opened fd: "+fd);
+
+        System.out.println("writing to fd...");
+
+        byte[] buff = "hello, world!\n".getBytes();
+        int bytes_written = test.unix_socket_write(fd, buff, buff.length);
+
+        System.out.println("bytes written (should be "+buff.length+"): "+bytes_written);
+
+        test.close_unix_socket(fd);
+
+        System.out.println("closed fd: "+fd);
+
+        if(bytes_written != buff.length) {
+            System.out.println("Test FAILED!");
+            System.exit(1);
+        }
+
+        System.out.println("Test passed!");
+
     }
 
 }
