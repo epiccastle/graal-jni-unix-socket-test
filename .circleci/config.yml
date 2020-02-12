@@ -1,0 +1,176 @@
+# Clojure CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-clojure/ for more details
+#
+version: 2.1
+
+jobs:
+  # jvm:
+  #   docker:
+  #     # specify the version you desire here
+  #     - image: circleci/clojure:lein-2.8.1
+  #   working_directory: ~/repo
+  #   environment:
+  #     LEIN_ROOT: "true"
+  #   steps:
+  #     - checkout
+  #     - restore_cache:
+  #         keys:
+  #           - v1-dependencies-{{ checksum "project.clj" }}
+  #           # fallback to using the latest cache if no exact match is found
+  #           - v1-dependencies-
+  #     - run:
+  #         name: Install native dev tools
+  #         command: |
+  #           sudo apt-get update
+  #           sudo apt-get -y install gcc zlib1g-dev make lsb-release file
+  #     - run:
+  #         name: Install Clojure
+  #         command: |
+  #           wget -nc https://download.clojure.org/install/linux-install-1.10.1.447.sh
+  #           chmod +x linux-install-1.10.1.447.sh
+  #           sudo ./linux-install-1.10.1.447.sh
+  #     - run:
+  #         name: Run JVM tests
+  #         command: |
+  #           sudo apt-get -y install openssh-server
+  #           sudo grep -v ^# /etc/ssh/sshd_config|grep -v ^$
+  #           sudo mkdir /run/sshd
+  #           make clean lib
+  #           make circle-ci
+  #     - save_cache:
+  #         paths:
+  #           - ~/.m2
+  #         key: v1-dependencies-{{ checksum "project.clj" }}
+  #     - run:
+  #         name: Create uberjar and native image
+  #         command: |
+  #           mkdir -p /tmp/release
+  #           make jar
+  #           # lein do clean, uberjar
+  #           # VERSION=$(cat .meta/VERSION)
+  #           # cp target/uberjar/bootleg-$VERSION-standalone.jar /tmp/release
+
+  #     - store_artifacts:
+  #         path: /tmp/release
+  #         destination: release
+
+  # linux:
+  #   docker:
+  #     - image: circleci/clojure:lein-2.8.1
+  #   working_directory: ~/repo
+  #   environment:
+  #     LEIN_ROOT: "true"
+  #     GRAALVM_HOME: /home/circleci/graalvm-ce-java8-19.3.1
+  #   steps:
+  #     - checkout
+  #     - restore_cache:
+  #         keys:
+  #           - linux-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
+  #     - run:
+  #         name: Install Clojure
+  #         command: |
+  #           wget https://download.clojure.org/install/linux-install-1.10.1.447.sh
+  #           chmod +x linux-install-1.10.1.447.sh
+  #           sudo ./linux-install-1.10.1.447.sh
+  #     - run:
+  #         name: Install native dev tools
+  #         command: |
+  #           sudo apt-get update
+  #           sudo apt-get -y install gcc zlib1g-dev make
+  #     - run:
+  #         name: Download GraalVM
+  #         command: |
+  #           cd ~
+  #           if ! [ -d graalvm-ce-java8-19.3.1 ]; then
+  #             curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
+  #             tar xzf graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
+  #           fi
+  #           graalvm-ce-java8-19.3.1/bin/gu install native-image
+  #     - run:
+  #         name: Build binary
+  #         command: |
+  #           make copy-libs-to-resource clean all package-linux GRAALVM=$GRAALVM_HOME
+  #         no_output_timeout: 40m
+  #     - run:
+  #         name: Copy artifacts
+  #         command: |
+  #           cp *.tgz /tmp/release
+  #     - save_cache:
+  #         paths:
+  #           - ~/.m2
+  #           - ~/graalvm-ce-java8-19.3.1
+  #         key: linux-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
+  #     - store_artifacts:
+  #         path: /tmp/release
+  #         destination: release
+  mac:
+    macos:
+      xcode: "9.0"
+    environment:
+      # GRAALVM_HOME: /Users/distiller/graalvm-ce-java8-20.1.0-dev/Contents/Home
+      # GRAALVM_HOME: /Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home
+      GRAALVM_HOME: /Users/distiller/graalvm-ce-java11-19.3.1/Contents/Home
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - mac-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
+      # - run:
+      #     name: MacOS cc info
+      #     command: |
+      #       cc -v
+      # - run:
+      #     name: MacOS linker info
+      #     command: |
+      #       cc -Wl,-v
+      # - run:
+      #     name: MacOS version info
+      #     command: |
+      #        sw_vers
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            ls -la
+            if ! [ -d graalvm-ce-java11-19.3.1 ]; then
+              # curl -O -sL https://github.com/graalvm/graalvm-ce-dev-builds/releases/download/20.1.0-dev-20200211_0341/graalvm-ce-java8-darwin-amd64-20.1.0-dev.tar.gz
+              # curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java8-darwin-amd64-19.3.1.tar.gz
+              curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java11-darwin-amd64-19.3.1.tar.gz
+              ls -alF
+              # tar xzf graalvm-ce-java8-darwin-amd64-20.1.0-dev.tar.gz
+              # tar xzf graalvm-ce-java8-darwin-amd64-19.3.1.tar.gz
+              tar xzf graalvm-ce-java11-darwin-amd64-19.3.1.tar.gz
+            fi
+            $GRAALVM_HOME/bin/gu install native-image
+          no_output_timeout: 30m
+      # - run:
+      #     name: MacOS java info
+      #     command: |
+      #        java -Xinternalversion
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
+
+workflows:
+  version: 2
+  ci:
+    jobs:
+      # - jvm:
+      #     filters:
+      #       branches:
+      #         only: master
+      - mac:
+          filters:
+            branches:
+              only: master
+
+      # build on free circleci account runs out of ram
+      # Error: Image build request failed with exit status 137
+      # - linux
