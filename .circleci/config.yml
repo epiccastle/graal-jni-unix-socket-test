@@ -9,6 +9,7 @@ jobs:
   #   docker:
   #     # specify the version you desire here
   #     - image: circleci/clojure:lein-2.8.1
+  #     - image: circleci/openjdk:8-jdk
   #   working_directory: ~/repo
   #   environment:
   #     LEIN_ROOT: "true"
@@ -151,7 +152,7 @@ jobs:
       - run:
           name: Run Socket Test JVM
           command: |
-            make clean run-jar-test
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
       - run:
           name: Run Socket Test Native Image
           command: |

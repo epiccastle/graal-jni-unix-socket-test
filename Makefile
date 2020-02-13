@@ -5,22 +5,21 @@ ifneq (,$(findstring java11,$(GRAALVM)))
 else
 	JAVA_VERSION = 8
 endif
-UNAME = $(shell uname)
-ifeq ($(UNAME),Linux)
-	LIB_FILE=$(SOLIB_FILE)
-	INCLUDE_DIRS=$(shell find $(JAVA_HOME)/include -type d)
-else ifeq ($(UNAME),FreeBSD)
-	LIB_FILE=$(SOLIB_FILE)
-	INCLUDE_DIRS=$(shell find $(JAVA_HOME)/include -type d)
-else ifeq ($(UNAME),Darwin)
-	LIB_FILE=$(DYLIB_FILE)
-	INCLUDE_DIRS=$(shell find $(JAVA_HOME)/Contents/Home/include -type d)
-endif
+
+INCLUDE_DIRS=$(shell find $(JAVA_HOME)/include -type d)
 INCLUDE_ARGS=$(INCLUDE_DIRS:%=-I%) -I.
 SOLIB_FILE=libSocketTest.so
 DYLIB_FILE=libSocketTest.dylib
 C_FILE=src/SocketTest.c
 C_HEADER=src/SocketTest.h
+UNAME = $(shell uname)
+ifeq ($(UNAME),Linux)
+	LIB_FILE=$(SOLIB_FILE)
+else ifeq ($(UNAME),FreeBSD)
+	LIB_FILE=$(SOLIB_FILE)
+else ifeq ($(UNAME),Darwin)
+	LIB_FILE=$(DYLIB_FILE)
+endif
 
 clean:
 	-rm src/*.class
