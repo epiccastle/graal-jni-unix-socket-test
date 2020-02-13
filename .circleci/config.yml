@@ -105,50 +105,51 @@ jobs:
   #     - store_artifacts:
   #         path: /tmp/release
   #         destination: release
+  mac-info:
+    macos:
+      xcode: "10.0"
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - mac-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: MacOS cc info
+          command: |
+            cc -v
+      - run:
+          name: MacOS version info
+          command: |
+             sw_vers
+      - run:
+          name: MacOS java info
+          command: |
+             java -Xinternalversion
+      - run:
+          name: MacOS linker info
+          command: |
+            cc -Wl,-v
+
   mac-java11-19-3-1:
     macos:
       xcode: "10.0"
     environment:
-      # GRAALVM_HOME: /Users/distiller/graalvm-ce-java8-20.1.0-dev/Contents/Home
-      # GRAALVM_HOME: /Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home
       GRAALVM_HOME: /Users/distiller/graalvm-ce-java11-19.3.1/Contents/Home
     steps:
       - checkout
       - restore_cache:
           keys:
             - mac-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
-      # - run:
-      #     name: MacOS cc info
-      #     command: |
-      #       cc -v
-      # - run:
-      #     name: MacOS linker info
-      #     command: |
-      #       cc -Wl,-v
-      # - run:
-      #     name: MacOS version info
-      #     command: |
-      #        sw_vers
       - run:
           name: Download GraalVM
           command: |
             cd ~
-            ls -la
             if ! [ -d graalvm-ce-java11-19.3.1 ]; then
-              # curl -O -sL https://github.com/graalvm/graalvm-ce-dev-builds/releases/download/20.1.0-dev-20200211_0341/graalvm-ce-java8-darwin-amd64-20.1.0-dev.tar.gz
-              # curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java8-darwin-amd64-19.3.1.tar.gz
               curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java11-darwin-amd64-19.3.1.tar.gz
-              ls -alF
-              # tar xzf graalvm-ce-java8-darwin-amd64-20.1.0-dev.tar.gz
-              # tar xzf graalvm-ce-java8-darwin-amd64-19.3.1.tar.gz
               tar xzf graalvm-ce-java11-darwin-amd64-19.3.1.tar.gz
             fi
             $GRAALVM_HOME/bin/gu install native-image
           no_output_timeout: 30m
-      # - run:
-      #     name: MacOS java info
-      #     command: |
-      #        java -Xinternalversion
       - run:
           name: Run Socket Test JVM
           command: |
@@ -163,7 +164,6 @@ jobs:
     macos:
       xcode: "10.0"
     environment:
-      # GRAALVM_HOME: /Users/distiller/graalvm-ce-java8-20.1.0-dev/Contents/Home
       GRAALVM_HOME: /Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home
     steps:
       - checkout
@@ -174,11 +174,8 @@ jobs:
           name: Download GraalVM
           command: |
             cd ~
-            ls -la
-            if ! [ -d graalvm-ce-java11-19.3.1 ]; then
-              # curl -O -sL https://github.com/graalvm/graalvm-ce-dev-builds/releases/download/20.1.0-dev-20200211_0341/graalvm-ce-java8-darwin-amd64-20.1.0-dev.tar.gz
+            if ! [ -d graalvm-ce-java8-19.3.1 ]; then
               curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java8-darwin-amd64-19.3.1.tar.gz
-              # tar xzf graalvm-ce-java8-darwin-amd64-20.1.0-dev.tar.gz
               tar xzf graalvm-ce-java8-darwin-amd64-19.3.1.tar.gz
             fi
             $GRAALVM_HOME/bin/gu install native-image
@@ -223,6 +220,36 @@ jobs:
             make clean run-native-test GRAALVM=$GRAALVM_HOME
           no_output_timeout: 60m
 
+  mac-java11-20-1-0-dev:
+    macos:
+      xcode: "10.0"
+    environment:
+      GRAALVM_HOME: /Users/distiller/graalvm-ce-java11-20.1.0-dev/Contents/Home
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - mac-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            if ! [ -d graalvm-ce-java11-20.1.0-dev ]; then
+              curl -O -sL https://github.com/graalvm/graalvm-ce-dev-builds/releases/download/20.1.0-dev-20200211_0341/graalvm-ce-java11-darwin-amd64-20.1.0-dev.tar.gz
+              tar xzf graalvm-ce-java11-darwin-amd64-20.1.0-dev.tar.gz
+            fi
+            $GRAALVM_HOME/bin/gu install native-image
+          no_output_timeout: 30m
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
+
 workflows:
   version: 2
   ci:
@@ -231,15 +258,23 @@ workflows:
       #     filters:
       #       branches:
       #         only: master
-      - mac-java11-19-3-1:
-          filters:
-            branches:
-              only: master
       - mac-java8-19-3-1:
           filters:
             branches:
               only: master
+      - mac-info:
+          filters:
+            branches:
+              only: master
+      - mac-java11-19-3-1:
+          filters:
+            branches:
+              only: master
       - mac-java8-20-1-0-dev:
+          filters:
+            branches:
+              only: master
+      - mac-java11-20-1-0-dev:
           filters:
             branches:
               only: master
