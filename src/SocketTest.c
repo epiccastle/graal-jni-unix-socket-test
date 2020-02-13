@@ -121,6 +121,7 @@ JNIEXPORT jint JNICALL Java_SocketTest_unix_1socket_1write
 {
   jboolean copy = 1;
   jbyte *buffer = (*env)->GetByteArrayElements(env, buf, &copy);
+  printf("Java_SocketTest_unix_1socket_1write writing %d bytes\n", count);
   int bytes_writen = write(fd, (const void *)buffer, count);
   (*env)->ReleaseByteArrayElements(env, buf, buffer, JNI_ABORT);
   return bytes_writen;
