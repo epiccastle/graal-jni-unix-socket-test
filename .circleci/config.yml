@@ -149,10 +149,10 @@ jobs:
       #     name: MacOS java info
       #     command: |
       #        java -Xinternalversion
-      - run:
-          name: Run Socket Test JVM
-          command: |
-            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      # - run:
+      #     name: Run Socket Test JVM
+      #     command: |
+      #       make clean run-jar-test GRAALVM=$GRAALVM_HOME
       - run:
           name: Run Socket Test Native Image
           command: |
