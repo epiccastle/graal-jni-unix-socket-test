@@ -5,58 +5,8 @@
 version: 2.1
 
 jobs:
-  # jvm:
-  #   docker:
-  #     # specify the version you desire here
-  #     - image: circleci/clojure:lein-2.8.1
-  #     - image: circleci/openjdk:8-jdk
-  #   working_directory: ~/repo
-  #   environment:
-  #     LEIN_ROOT: "true"
-  #   steps:
-  #     - checkout
-  #     - restore_cache:
-  #         keys:
-  #           - v1-dependencies-{{ checksum "project.clj" }}
-  #           # fallback to using the latest cache if no exact match is found
-  #           - v1-dependencies-
-  #     - run:
-  #         name: Install native dev tools
-  #         command: |
-  #           sudo apt-get update
-  #           sudo apt-get -y install gcc zlib1g-dev make lsb-release file
-  #     - run:
-  #         name: Install Clojure
-  #         command: |
-  #           wget -nc https://download.clojure.org/install/linux-install-1.10.1.447.sh
-  #           chmod +x linux-install-1.10.1.447.sh
-  #           sudo ./linux-install-1.10.1.447.sh
-  #     - run:
-  #         name: Run JVM tests
-  #         command: |
-  #           sudo apt-get -y install openssh-server
-  #           sudo grep -v ^# /etc/ssh/sshd_config|grep -v ^$
-  #           sudo mkdir /run/sshd
-  #           make clean lib
-  #           make circle-ci
-  #     - save_cache:
-  #         paths:
-  #           - ~/.m2
-  #         key: v1-dependencies-{{ checksum "project.clj" }}
-  #     - run:
-  #         name: Create uberjar and native image
-  #         command: |
-  #           mkdir -p /tmp/release
-  #           make jar
-  #           # lein do clean, uberjar
-  #           # VERSION=$(cat .meta/VERSION)
-  #           # cp target/uberjar/bootleg-$VERSION-standalone.jar /tmp/release
 
-  #     - store_artifacts:
-  #         path: /tmp/release
-  #         destination: release
-
-  linux:
+  linux-java8-19-3-1:
     docker:
       - image: circleci/openjdk:8-jdk
     working_directory: ~/repo
@@ -81,6 +31,41 @@ jobs:
               tar xzf graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
             fi
             graalvm-ce-java8-19.3.1/bin/gu install native-image
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
+
+  linux-java11-19-3-1:
+    docker:
+      - image: circleci/openjdk:8-jdk
+    working_directory: ~/repo
+    environment:
+      GRAALVM_HOME: /home/circleci/graalvm-ce-java11-19.3.1
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - linux-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: Install native dev tools
+          command: |
+            sudo apt-get update
+            sudo apt-get -y install gcc zlib1g-dev make netcat-openbsd
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            if ! [ -d graalvm-ce-java11-19.3.1 ]; then
+              curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java11-linux-amd64-19.3.1.tar.gz
+              tar xzf graalvm-ce-java11-linux-amd64-19.3.1.tar.gz
+            fi
+            graalvm-ce-java11-19.3.1/bin/gu install native-image
       - run:
           name: Run Socket Test JVM
           command: |
@@ -264,7 +249,11 @@ workflows:
           filters:
             branches:
               only: master
-      - linux:
+      - linux-java8-19-3-1:
+          filters:
+            branches:
+              only: master
+      - linux-java11-19-3-1:
           filters:
             branches:
               only: master
