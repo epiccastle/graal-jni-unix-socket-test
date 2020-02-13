@@ -105,7 +105,7 @@ jobs:
   #     - store_artifacts:
   #         path: /tmp/release
   #         destination: release
-  mac:
+  mac-java11-19.3.1:
     macos:
       xcode: "10.0"
     environment:
@@ -116,15 +116,15 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - mac-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
-      - run:
-          name: MacOS cc info
-          command: |
-            cc -v
-      - run:
-          name: MacOS linker info
-          command: |
-            cc -Wl,-v
+            - mac-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      # - run:
+      #     name: MacOS cc info
+      #     command: |
+      #       cc -v
+      # - run:
+      #     name: MacOS linker info
+      #     command: |
+      #       cc -Wl,-v
       # - run:
       #     name: MacOS version info
       #     command: |
@@ -149,10 +149,10 @@ jobs:
       #     name: MacOS java info
       #     command: |
       #        java -Xinternalversion
-      # - run:
-      #     name: Run Socket Test JVM
-      #     command: |
-      #       make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
       - run:
           name: Run Socket Test Native Image
           command: |
