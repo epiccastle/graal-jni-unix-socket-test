@@ -117,14 +117,14 @@ jobs:
       - restore_cache:
           keys:
             - mac-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
-      # - run:
-      #     name: MacOS cc info
-      #     command: |
-      #       cc -v
-      # - run:
-      #     name: MacOS linker info
-      #     command: |
-      #       cc -Wl,-v
+      - run:
+          name: MacOS cc info
+          command: |
+            cc -v
+      - run:
+          name: MacOS linker info
+          command: |
+            cc -Wl,-v
       # - run:
       #     name: MacOS version info
       #     command: |
