@@ -1,8 +1,23 @@
 GRAALVM = $(HOME)/graalvm-ce-java11-19.3.1
+JAVA_HOME = $(GRAALVM)
 ifneq (,$(findstring java11,$(GRAALVM)))
 	JAVA_VERSION = 11
 else
 	JAVA_VERSION = 8
+endif
+INCLUDE_DIRS=$(shell find $(JAVA_HOME)/include -type d)
+INCLUDE_ARGS=$(INCLUDE_DIRS:%=-I%) -I.
+SOLIB_FILE=libSocketTest.so
+DYLIB_FILE=libSocketTest.dylib
+C_FILE=src/SocketTest.c
+C_HEADER=src/SocketTest.h
+UNAME = $(shell uname)
+ifeq ($(UNAME),Linux)
+	LIB_FILE=$(SOLIB_FILE)
+else ifeq ($(UNAME),FreeBSD)
+	LIB_FILE=$(SOLIB_FILE)
+else ifeq ($(UNAME),Darwin)
+	LIB_FILE=$(DYLIB_FILE)
 endif
 
 clean:
@@ -10,6 +25,7 @@ clean:
 	-rm src/*.h
 	-rm *.jar
 	-rm *.so
+	-rm *.dynlib
 	-rm sockettest
 
 src/SocketTest.class: src/SocketTest.java
@@ -22,17 +38,22 @@ else
 	cd src && javac -h ./ SocketTest.java
 endif
 
-libSocketTest.so: src/SocketTest.h src/SocketTest.c
-	gcc -shared -Wall -Werror -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -o libSocketTest.so -fPIC src/SocketTest.c
+lib: $(LIB_FILE)
+
+$(SOLIB_FILE): $(C_FILE) $(C_HEADER)
+	$(CC) $(INCLUDE_ARGS) -shared $(C_FILE) -o $(SOLIB_FILE) -fPIC
+
+$(DYLIB_FILE):  $(C_FILE) $(C_HEADER)
+	$(CC) $(INCLUDE_ARGS) -dynamiclib -undefined suppress -flat_namespace $(C_FILE) -o $(DYLIB_FILE) -fPIC
 
 SocketTest.jar: src/SocketTest.class src/manifest.txt
 	cd src && jar cfm ../SocketTest.jar manifest.txt SocketTest.class
 
-run-jar-test: SocketTest.jar libSocketTest.so
+run-jar-test: SocketTest.jar lib
 	nc -l -U socket & \
 	LD_LIBRARY_PATH=./ java -jar SocketTest.jar
 
-sockettest: SocketTest.jar libSocketTest.so
+sockettest: SocketTest.jar lib
 	$(GRAALVM)/bin/native-image \
 		-jar SocketTest.jar \
 		-H:Name=sockettest \
@@ -46,6 +67,6 @@ sockettest: SocketTest.jar libSocketTest.so
 
 #		-H:+TraceClassInitialization -H:+PrintClassInitialization
 
-run-native-test: sockettest libSocketTest.so
+run-native-test: sockettest lib
 	nc -l -U socket & \
 	LD_LIBRARY_PATH=./ ./sockettest
