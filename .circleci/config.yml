@@ -56,55 +56,41 @@ jobs:
   #         path: /tmp/release
   #         destination: release
 
-  # linux:
-  #   docker:
-  #     - image: circleci/clojure:lein-2.8.1
-  #   working_directory: ~/repo
-  #   environment:
-  #     LEIN_ROOT: "true"
-  #     GRAALVM_HOME: /home/circleci/graalvm-ce-java8-19.3.1
-  #   steps:
-  #     - checkout
-  #     - restore_cache:
-  #         keys:
-  #           - linux-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
-  #     - run:
-  #         name: Install Clojure
-  #         command: |
-  #           wget https://download.clojure.org/install/linux-install-1.10.1.447.sh
-  #           chmod +x linux-install-1.10.1.447.sh
-  #           sudo ./linux-install-1.10.1.447.sh
-  #     - run:
-  #         name: Install native dev tools
-  #         command: |
-  #           sudo apt-get update
-  #           sudo apt-get -y install gcc zlib1g-dev make
-  #     - run:
-  #         name: Download GraalVM
-  #         command: |
-  #           cd ~
-  #           if ! [ -d graalvm-ce-java8-19.3.1 ]; then
-  #             curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
-  #             tar xzf graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
-  #           fi
-  #           graalvm-ce-java8-19.3.1/bin/gu install native-image
-  #     - run:
-  #         name: Build binary
-  #         command: |
-  #           make copy-libs-to-resource clean all package-linux GRAALVM=$GRAALVM_HOME
-  #         no_output_timeout: 40m
-  #     - run:
-  #         name: Copy artifacts
-  #         command: |
-  #           cp *.tgz /tmp/release
-  #     - save_cache:
-  #         paths:
-  #           - ~/.m2
-  #           - ~/graalvm-ce-java8-19.3.1
-  #         key: linux-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
-  #     - store_artifacts:
-  #         path: /tmp/release
-  #         destination: release
+  linux:
+    docker:
+      - image: circleci/openjdk:8-jdk
+    working_directory: ~/repo
+    environment:
+      GRAALVM_HOME: /home/circleci/graalvm-ce-java8-19.3.1
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - linux-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: Install native dev tools
+          command: |
+            sudo apt-get update
+            sudo apt-get -y install gcc zlib1g-dev make netcat-openbsd
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            if ! [ -d graalvm-ce-java8-19.3.1 ]; then
+              curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
+              tar xzf graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
+            fi
+            graalvm-ce-java8-19.3.1/bin/gu install native-image
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
+
   mac-info:
     macos:
       xcode: "10.0"
@@ -275,6 +261,10 @@ workflows:
             branches:
               only: master
       - mac-java11-20-1-0-dev:
+          filters:
+            branches:
+              only: master
+      - linux:
           filters:
             branches:
               only: master
