@@ -3,20 +3,50 @@ Minimal test code to recreate failing macos unix domain socket failing writes
 
 ## Problem
 
-JNI code writing to Unix domain sockets, when called from a graal native-image on MacOS, always writes 0 bytes.
+**JNI code writing to Unix domain sockets, when called from a graal native-image on MacOS, always writes 0 bytes.**
+
+The code works on Linux, on both the JVM and as a native image. On MacOS the code works when running on the JVM, but fails when run as a native-image.
+
+What this code does:
+
+* runs netcat to make a Unix domain socket and read from it. This read blocks, waiting for a write.
+* the java code then runs. It loads the .dynlib (or .so) library
+* JNI code opens the unix domain socket and returns the file descriptor
+* The java then write()'s to the file descriptor a short string
+* The java code then closes the unix domain socket.
+* The program assert that the write() call (which returns the number of bytes written) has written all the bytes
+
+What happens:
+
+The write() call always write 0 bytes.
+
+## Circle CI builds
+
+You can see these tests running on Circle CI here:
+
+https://circleci.com/gh/epiccastle/graal-jni-unix-socket-test/tree/master
+
+Results:
+
+linux java8 19.3.1 passes
+linux java11 19.3.1 passes
+mac java8 19.3.1 fails
+mac java11 19.3.1 fails
+mac java8 20.1.0-dev fails
+mac java11 20.1.0-dev fails
 
 ## Running
 
 ### JVM
 
 ```shell
-make run-jar-test
+make run-jar-test GRAALVM=$GRAALVM_HOME
 ```
 
 ### native-image
 
 ```
-make run-native-test
+make run-native-test GRAALVM=$GRAALVM_HOME
 ```
 
 ### cleaning
@@ -27,7 +57,153 @@ make clean
 
 ## Results
 
+### MacOS
+
+#### JVM
+
+```shell
+$ java -Xinternalversion
+
+Java HotSpot(TM) 64-Bit Server VM (25.181-b13) for bsd-amd64 JRE (1.8.0_181-b13), built on Jul  7 2018 01:02:31 by "java_re" with gcc 4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2336.11.00)
+
+$ make clean run-jar-test GRAALVM=$GRAALVM_HOME
+rm src/*.class
+rm: src/*.class: No such file or directory
+make: [clean] Error 1 (ignored)
+rm src/*.h
+rm: src/*.h: No such file or directory
+make: [clean] Error 1 (ignored)
+rm *.jar
+rm: *.jar: No such file or directory
+make: [clean] Error 1 (ignored)
+rm *.so
+rm: *.so: No such file or directory
+make: [clean] Error 1 (ignored)
+rm *.dynlib
+rm: *.dynlib: No such file or directory
+make: [clean] Error 1 (ignored)
+rm sockettest
+rm: sockettest: No such file or directory
+make: [clean] Error 1 (ignored)
+javac src/SocketTest.java
+cd src && jar cfm ../SocketTest.jar manifest.txt SocketTest.class
+cd src && javah -o SocketTest.h -cp ./ SocketTest
+cc -I/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/include -I/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/include/darwin -I. -dynamiclib -undefined suppress -flat_namespace src/SocketTest.c -o libSocketTest.dylib -fPIC
+rm -f socket; \
+    nc -l -U socket & \
+    sleep 5; \
+    LD_LIBRARY_PATH=./ java -jar SocketTest.jar
+Hello world; this is C talking!
+opened fd: 6
+writing to fd...
+hello, world!
+bytes written (should be 14): 14
+closed fd: 6
+Test passed!
+```
+
+#### Native Image
+
+```
+$ make clean run-native-test GRAALVM=$GRAALVM_HOME
+rm src/*.class
+rm src/*.h
+rm *.jar
+rm *.so
+rm: *.so: No such file or directory
+make: [clean] Error 1 (ignored)
+rm *.dynlib
+rm: *.dynlib: No such file or directory
+make: [clean] Error 1 (ignored)
+rm sockettest
+rm: sockettest: No such file or directory
+make: [clean] Error 1 (ignored)
+javac src/SocketTest.java
+cd src && jar cfm ../SocketTest.jar manifest.txt SocketTest.class
+cd src && javah -o SocketTest.h -cp ./ SocketTest
+cc -I/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/include -I/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/include/darwin -I. -dynamiclib -undefined suppress -flat_namespace src/SocketTest.c -o libSocketTest.dylib -fPIC
+/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/bin/native-image \
+        -jar SocketTest.jar \
+        -H:Name=sockettest \
+        -H:+ReportExceptionStackTraces \
+        -H:ConfigurationFileDirectories=config-dir \
+        --initialize-at-build-time \
+        --verbose \
+        --no-fallback \
+        --no-server \
+        "-J-Xmx1g"
+Executing [
+/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/bin/java \
+-XX:+UnlockExperimentalVMOptions \
+-XX:+EnableJVMCI \
+-Dtruffle.TrustAllTruffleRuntimeProviders=true \
+-Dtruffle.TruffleRuntime=com.oracle.truffle.api.impl.DefaultTruffleRuntime \
+-Dgraalvm.ForcePolyglotInvalid=true \
+-Dgraalvm.locatorDisabled=true \
+-d64 \
+-XX:-UseJVMCIClassLoader \
+-XX:+UseJVMCINativeLibrary \
+-Xss10m \
+-Xms1g \
+-Xmx6871947672 \
+-Duser.country=US \
+-Duser.language=en \
+-Dorg.graalvm.version=19.3.1 \
+-Dorg.graalvm.config=CE \
+-Dcom.oracle.graalvm.isaot=true \
+-Djvmci.class.path.append=/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/jvmci/graal.jar \
+-javaagent:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/svm.jar \
+-Djdk.internal.lambda.disableEagerInitialization=true \
+-Djdk.internal.lambda.eagerlyInitialize=false \
+-Djava.lang.invoke.InnerClassLambdaMetafactory.initializeLambdas=false \
+-Xmx1g \
+-Xbootclasspath/a:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/boot/graal-sdk.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/boot/graaljs-scriptengine.jar \
+-cp \
+/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/graal-llvm.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/javacpp-shadowed.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/llvm-platform-specific-shadowed.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/llvm-wrapper-shadowed.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/objectfile.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/pointsto.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/svm-llvm.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/svm.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/jvmci/graal-management.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/jvmci/graal.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/jvmci/jvmci-api.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/jvmci/jvmci-hotspot.jar \
+com.oracle.svm.hosted.NativeImageGeneratorRunner \
+-imagecp \
+/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/boot/graal-sdk.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/boot/graaljs-scriptengine.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/graal-llvm.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/javacpp-shadowed.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/llvm-platform-specific-shadowed.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/llvm-wrapper-shadowed.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/objectfile.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/pointsto.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/svm-llvm.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/builder/svm.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/jvmci/graal-management.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/jvmci/graal.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/jvmci/jvmci-api.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/jvmci/jvmci-hotspot.jar:/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/library-support.jar:/Users/distiller/project/SocketTest.jar \
+-H:Path=/Users/distiller/project \
+-H:Class=SocketTest \
+-H:+ReportExceptionStackTraces \
+-H:ConfigurationFileDirectories=config-dir \
+-H:ClassInitialization=:build_time \
+-H:FallbackThreshold=0 \
+-H:CLibraryPath=/Users/distiller/graalvm-ce-java8-19.3.1/Contents/Home/jre/lib/svm/clibraries/darwin-amd64 \
+-H:Name=sockettest
+]
+[sockettest:658]    classlist:   2,609.97 ms
+[sockettest:658]        (cap):   2,352.17 ms
+[sockettest:658]        setup:   4,091.46 ms
+[sockettest:658]   (typeflow):   4,852.49 ms
+[sockettest:658]    (objects):   4,295.98 ms
+[sockettest:658]   (features):     218.70 ms
+[sockettest:658]     analysis:   9,509.99 ms
+[sockettest:658]     (clinit):     145.00 ms
+[sockettest:658]     universe:     467.81 ms
+[sockettest:658]      (parse):   1,066.00 ms
+[sockettest:658]     (inline):   1,890.51 ms
+[sockettest:658]    (compile):   6,216.90 ms
+[sockettest:658]      compile:   9,636.61 ms
+[sockettest:658]        image:     727.41 ms
+[sockettest:658]        write:     244.79 ms
+[sockettest:658]      [total]:  27,775.94 ms
+rm -f socket; \
+    nc -l -U socket & \
+    sleep 5; \
+    LD_LIBRARY_PATH=./ ./sockettest
+Hello world; this is C talking!
+opened fd: 3
+writing to fd...
+bytes written (should be 14): 0
+closed fd: 3
+Test FAILED!
+make: *** [run-native-test] Error 1
+```
+
 ### Linux
+
+Here is linux in comparison
 
 #### JVM
 
