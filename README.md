@@ -28,12 +28,12 @@ https://circleci.com/gh/epiccastle/graal-jni-unix-socket-test/tree/master
 
 Results:
 
-linux java8 19.3.1 passes
-linux java11 19.3.1 passes
-mac java8 19.3.1 fails
-mac java11 19.3.1 fails
-mac java8 20.1.0-dev fails
-mac java11 20.1.0-dev fails
+* linux java8 19.3.1 **passes**
+* linux java11 19.3.1 **passes**
+* mac java8 19.3.1 **fails**
+* mac java11 19.3.1 **fails**
+* mac java8 20.1.0-dev **fails**
+* mac java11 20.1.0-dev **fails**
 
 ## Running
 
