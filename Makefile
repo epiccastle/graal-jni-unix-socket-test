@@ -51,7 +51,9 @@ SocketTest.jar: src/SocketTest.class src/manifest.txt
 	cd src && jar cfm ../SocketTest.jar manifest.txt SocketTest.class
 
 run-jar-test: SocketTest.jar lib
+	rm -f socket; \
 	nc -l -U socket & \
+	sleep 5; \
 	LD_LIBRARY_PATH=./ java -jar SocketTest.jar
 
 sockettest: SocketTest.jar lib
@@ -69,5 +71,7 @@ sockettest: SocketTest.jar lib
 #		-H:+TraceClassInitialization -H:+PrintClassInitialization
 
 run-native-test: sockettest lib
+	rm -f socket; \
 	nc -l -U socket & \
+	sleep 5; \
 	LD_LIBRARY_PATH=./ ./sockettest
