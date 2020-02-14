@@ -3,6 +3,34 @@ Minimal test code to recreate failing macos unix domain socket failing writes
 
 ## Problem
 
+**Calling a JNI function call from a graal native-image on MacOS: An integer passed after a byte array is always 0**
+
+In the following:
+
+```
+public static native int unix_socket_write(int fd, byte[] buf, int count);
+```
+
+Count will always be set to `0` on the mac.
+
+However:
+
+```
+public static native int unix_socket_write(int fd, int count, byte[] buf);
+```
+
+will pass the correct parameters.
+
+### Workaround
+
+If you can, order your arguments to place the integers first.
+
+### Bug Ticket
+
+There is a ticket for this bug on the graal project here: https://github.com/oracle/graal/issues/2152
+
+## Old Problem Statement
+
 **JNI code writing to Unix domain sockets, when called from a graal native-image on MacOS, always writes 0 bytes.**
 
 The code works on Linux, on both the JVM and as a native image. On MacOS the code works when running on the JVM, but fails when run as a native-image.
