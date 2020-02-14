@@ -21,7 +21,7 @@ class SocketTest {
     public static native int unix_socket_read(int fd, byte[] buf, int count);
 
     // write to a unix domain socket
-    public static native int unix_socket_write(int fd, byte[] buf, int count);
+    public static native int unix_socket_write(int fd, int count, byte[] buf);
 
     // entry point
     public static void main(String[] args) {
@@ -42,7 +42,7 @@ class SocketTest {
         System.out.println("writing to fd...");
 
         byte[] buff = "hello, world!\n".getBytes();
-        int bytes_written = test.unix_socket_write(fd, buff, buff.length);
+        int bytes_written = test.unix_socket_write(fd, buff.length, buff);
 
         System.out.println("bytes written (should be "+buff.length+"): "+bytes_written);
 

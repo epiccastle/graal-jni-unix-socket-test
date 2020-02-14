@@ -117,7 +117,7 @@ JNIEXPORT jint JNICALL Java_SocketTest_unix_1socket_1read
  * Signature: (I[BI)I
  */
 JNIEXPORT jint JNICALL Java_SocketTest_unix_1socket_1write
-  (JNIEnv *env, jclass this, jint fd, jbyteArray buf, jint count)
+  (JNIEnv *env, jclass this, jint fd, jint count, jbyteArray buf)
 {
   jboolean copy = 1;
   jbyte *buffer = (*env)->GetByteArrayElements(env, buf, &copy);
