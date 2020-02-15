@@ -221,6 +221,66 @@ jobs:
             make clean run-native-test GRAALVM=$GRAALVM_HOME
           no_output_timeout: 60m
 
+  mac-java8-20-0-0-dev:
+    macos:
+      xcode: "10.0"
+    environment:
+      GRAALVM_HOME: /Users/distiller/graalvm-ce-java8-20.0.0-dev/Contents/Home
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - mac-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            if ! [ -d graalvm-ce-java8-20.0.0-dev ]; then
+              curl -O -sL https://github.com/graalvm/graalvm-ce-dev-builds/releases/download/20.0.0-dev-20200213_2110/graalvm-ce-java8-darwin-amd64-20.0.0-dev.tar.gz
+              tar xzf graalvm-ce-java8-darwin-amd64-20.0.0-dev.tar.gz
+            fi
+            $GRAALVM_HOME/bin/gu install native-image
+          no_output_timeout: 30m
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
+
+  mac-java11-20-0-0-dev:
+    macos:
+      xcode: "10.0"
+    environment:
+      GRAALVM_HOME: /Users/distiller/graalvm-ce-java11-20.0.0-dev/Contents/Home
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - mac-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            if ! [ -d graalvm-ce-java11-20.0.0-dev ]; then
+              curl -O -sL https://github.com/graalvm/graalvm-ce-dev-builds/releases/download/20.0.0-dev-20200213_2110/graalvm-ce-java11-darwin-amd64-20.0.0-dev.tar.gz
+              tar xzf graalvm-ce-java11-darwin-amd64-20.0.0-dev.tar.gz
+            fi
+            $GRAALVM_HOME/bin/gu install native-image
+          no_output_timeout: 30m
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
+
 workflows:
   version: 2
   ci:
@@ -246,6 +306,14 @@ workflows:
             branches:
               only: master
       - mac-java11-20-1-0-dev:
+          filters:
+            branches:
+              only: master
+      - mac-java8-20-0-0-dev:
+          filters:
+            branches:
+              only: master
+      - mac-java11-20-0-0-dev:
           filters:
             branches:
               only: master
