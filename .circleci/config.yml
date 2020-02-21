@@ -76,6 +76,77 @@ jobs:
             make clean run-native-test GRAALVM=$GRAALVM_HOME
           no_output_timeout: 60m
 
+  linux-java8-20-0-0:
+    docker:
+      - image: circleci/openjdk:8-jdk
+    working_directory: ~/repo
+    environment:
+      GRAALVM_HOME: /home/circleci/graalvm-ce-java8-20.0.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - linux-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: Install native dev tools
+          command: |
+            sudo apt-get update
+            sudo apt-get -y install gcc zlib1g-dev make netcat-openbsd
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            if ! [ -d graalvm-ce-java8-20.0.0 ]; then
+              curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.0.0/graalvm-ce-java8-linux-amd64-20.0.0.tar.gz
+              tar xzf graalvm-ce-java8-linux-amd64-20.0.0.tar.gz
+            fi
+            graalvm-ce-java8-20.0.0/bin/gu install native-image
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
+
+  linux-java11-20-0-0:
+    docker:
+      - image: circleci/openjdk:8-jdk
+    working_directory: ~/repo
+    environment:
+      GRAALVM_HOME: /home/circleci/graalvm-ce-java11-20.0.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - linux-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: Install native dev tools
+          command: |
+            sudo apt-get update
+            sudo apt-get -y install gcc zlib1g-dev make netcat-openbsd
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            if ! [ -d graalvm-ce-java11-20.0.0 ]; then
+              curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.0.0/graalvm-ce-java11-linux-amd64-20.0.0.tar.gz
+              tar xzf graalvm-ce-java11-linux-amd64-20.0.0.tar.gz
+            fi
+            graalvm-ce-java11-20.0.0/bin/gu install native-image
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
+
+
   mac-info:
     macos:
       xcode: "10.0"
@@ -100,6 +171,66 @@ jobs:
           name: MacOS linker info
           command: |
             cc -Wl,-v
+
+  mac-java11-20-0-0:
+    macos:
+      xcode: "10.0"
+    environment:
+      GRAALVM_HOME: /Users/distiller/graalvm-ce-java11-20.0.0/Contents/Home
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - mac-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            if ! [ -d graalvm-ce-java11-20.0.0 ]; then
+              curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.0.0/graalvm-ce-java11-darwin-amd64-20.0.0.tar.gz
+              tar xzf graalvm-ce-java11-darwin-amd64-20.0.0.tar.gz
+            fi
+            $GRAALVM_HOME/bin/gu install native-image
+          no_output_timeout: 30m
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
+
+  mac-java8-20-0-0:
+    macos:
+      xcode: "10.0"
+    environment:
+      GRAALVM_HOME: /Users/distiller/graalvm-ce-java8-20.0.0/Contents/Home
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - mac-{{ checksum "Makefile" }}-{{ checksum ".circleci/config.yml" }}
+      - run:
+          name: Download GraalVM
+          command: |
+            cd ~
+            if ! [ -d graalvm-ce-java8-20.0.0 ]; then
+              curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.0.0/graalvm-ce-java8-darwin-amd64-20.0.0.tar.gz
+              tar xzf graalvm-ce-java8-darwin-amd64-20.0.0.tar.gz
+            fi
+            $GRAALVM_HOME/bin/gu install native-image
+          no_output_timeout: 30m
+      - run:
+          name: Run Socket Test JVM
+          command: |
+            make clean run-jar-test GRAALVM=$GRAALVM_HOME
+      - run:
+          name: Run Socket Test Native Image
+          command: |
+            make clean run-native-test GRAALVM=$GRAALVM_HOME
+          no_output_timeout: 60m
 
   mac-java11-19-3-1:
     macos:
@@ -289,15 +420,23 @@ workflows:
       #     filters:
       #       branches:
       #         only: master
-      - mac-java8-19-3-1:
-          filters:
-            branches:
-              only: master
       - mac-info:
           filters:
             branches:
               only: master
+      - mac-java8-19-3-1:
+          filters:
+            branches:
+              only: master
       - mac-java11-19-3-1:
+          filters:
+            branches:
+              only: master
+      - mac-java8-20-0-0:
+          filters:
+            branches:
+              only: master
+      - mac-java11-20-0-0:
           filters:
             branches:
               only: master
@@ -322,6 +461,14 @@ workflows:
             branches:
               only: master
       - linux-java11-19-3-1:
+          filters:
+            branches:
+              only: master
+      - linux-java8-20-0-0:
+          filters:
+            branches:
+              only: master
+      - linux-java11-20-0-0:
           filters:
             branches:
               only: master
